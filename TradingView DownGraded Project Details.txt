@@ -1,0 +1,560 @@
+Nice. You chose the hard, high-ROI path: a unified Stocks + Crypto Trading & Market Analytics Platform. Good — that’s the exact kind of project that turns heads at MNC interviews because it forces you to prove system design, real-time processing, heavy SQL work, analytics, and front-end complexity.
+
+Below I give you a complete, battle-tested blueprint you can execute over 3–6 months. It includes: MVP definition, full architecture, MSSQL schema (core tables), API surface, data ingestion strategy, realtime design, deployment/devops, testing, security, and a 24-week sprint plan with weekly deliverables. No fluff. Do the work, follow the plan, you’ll have an interview-grade portfolio piece.
+
+1) High-level product summary (single-sentence)
+
+A multi-tenant web platform that ingests live market data (stocks + crypto), stores OHLC history, visualizes interactive charts with indicators, provides screeners, alerts, watchlists, backtesting, paper trading, news + sentiment overlays, and user portfolio tracking — built with Next.js frontend, Node.js/Express microservices, and MSSQL as the source-of-truth.
+
+2) MVP (must-have — build this first, 6–8 weeks)
+
+Cut scope hard. MVP = what you demo to recruiters.
+
+Frontend:
+
+Next.js SSR app (public pages + authenticated dashboard)
+
+Interactive candlestick charts with basic indicators (SMA, EMA)
+
+Watchlist and quote snapshot
+
+Alerts UI (create/list/acknowledge)
+
+Backend:
+
+Auth (JWT + refresh tokens, basic RBAC: user/admin)
+
+Market-data ingestion service (crypto + stocks) — live via WebSockets / HTTP polling
+
+OHLC storage in MSSQL + API to serve aggregated OHLC
+
+WebSocket server to push live quotes to clients
+
+Alerts service that evaluates conditions and pushes notifications
+
+Other:
+
+Deployable (Docker) with one-click start scripts
+
+Swagger/OpenAPI docs
+
+GitHub repo with clear README + live demo (VPS or Cloud)
+
+Finish MVP first — then add advanced modules (screener, backtesting, news) incrementally.
+
+3) Core architecture (textual diagram)
+
+Monorepo (or separate repos) with services:
+
+Clients
+
+Next.js (web UI) — SSR/SSG for pages, CSR for dashboards
+
+API Gateway
+
+Nginx or Node gateway (routes requests to services)
+
+Microservices (Node.js / Express)
+
+Auth Service (JWT, refresh, user mgmt)
+
+User Service (profiles, watchlists, portfolios)
+
+Market Ingest Service (connects to external feeds, normalizes data)
+
+OHLC Service (aggregations, historical queries)
+
+Alert Service (evaluates alert rules, triggers)
+
+Backtest Service (batch compute on historical OHLC)
+
+Notification Service (email / websocket / push)
+
+Admin Service (analytics, usage metrics)
+
+Infrastructure
+
+MSSQL (primary) — normalized schemas
+
+Redis (cache, ephemeral state, pub/sub)
+
+Message Queue (BullMQ with Redis or RabbitMQ) for background jobs
+
+WebSocket cluster (Socket.IO or ws) fronted by Nginx for sticky sessions
+
+Storage (S3 or MinIO) for snapshots, exported reports
+
+CI/CD (GitHub Actions), Docker, optional Kubernetes for scaling
+
+Notes:
+
+Start monolith + modular services if team-of-one; split into microservices as you scale.
+
+Use Redis both for caching and for pub/sub to push live updates to WebSocket servers.
+
+4) Tech stack (recommended)
+
+Frontend: Next.js (React), TypeScript, Zustand/React Query or SWR, Recharts/Lightweight TradingView library (Lightweight Charts), FullCalendar (if needed).
+Backend: Node.js (16+), TypeScript, Express or Fastify.
+DB: Microsoft SQL Server (MSSQL).
+Cache/Queue: Redis (caching + BullMQ).
+Realtime: Socket.IO or ws.
+Jobs: BullMQ + Redis (or RabbitMQ).
+DevOps: Docker, Nginx, GitHub Actions, optionally Kubernetes (minikube/EKS) for production-like.
+Storage: S3-compatible (AWS S3 or MinIO).
+Monitoring: Prometheus + Grafana or simple logging + Sentry.
+Optional: Python microservice for heavy numeric work/backtesting (pandas), but Node can handle many indicators.
+
+Use TypeScript everywhere — it makes this project maintainable and interview-friendly.
+
+5) MSSQL core schema (tables + columns — minimal but normalized)
+
+I’ll list the main tables with column names and types. Add constraints, foreign keys, indexes as shown.
+
+Users
+
+Users (UserId UNIQUEIDENTIFIER PK, Email VARCHAR(255) UNIQUE, PasswordHash VARCHAR(255), Role VARCHAR(50), CreatedAt DATETIME2, LastLogin DATETIME2)
+
+API Keys (optional)
+
+ApiKeys (ApiKeyId UNIQUEIDENTIFIER PK, UserId FK, Key VARCHAR(128), Name, Scopes, CreatedAt)
+
+Markets (instruments)
+
+Instruments (InstrumentId INT PK IDENTITY, Symbol VARCHAR(32), Exchange VARCHAR(64), InstrumentType VARCHAR(16) -- 'stock'|'crypto', Name VARCHAR(255), Currency VARCHAR(8), IsActive BIT)
+
+OHLC (raw history - normalized per interval)
+
+OHLC (OhlcId BIGINT PK IDENTITY, InstrumentId FK, Interval VARCHAR(10) -- '1m','5m','1h','1d', Open DECIMAL(18,8), High DECIMAL(18,8), Low DECIMAL(18,8), Close DECIMAL(18,8), Volume DECIMAL(28,8), Timestamp DATETIME2)
+Index: (InstrumentId, Interval, Timestamp DESC)
+
+Quotes (tick-level snapshots)
+
+Quotes (QuoteId BIGINT PK IDENTITY, InstrumentId, Price DECIMAL(18,8), Size DECIMAL(28,8) NULL, Timestamp DATETIME2, Source VARCHAR(64))
+
+Watchlists
+
+Watchlists (WatchlistId UNIQUEIDENTIFIER PK, UserId FK, Name VARCHAR(128), CreatedAt DATETIME2)
+
+WatchlistItems (WatchlistItemId UNIQUEIDENTIFIER PK, WatchlistId FK, InstrumentId FK, AddedAt DATETIME2)
+
+Alerts
+
+Alerts (AlertId UNIQUEIDENTIFIER PK, UserId FK, InstrumentId FK, ConditionJson NVARCHAR(MAX), IsActive BIT, CreatedAt DATETIME2, LastTriggered DATETIME2)
+ConditionJson example: {"type":"price_above","value":345.5}
+
+Portfolios & Positions
+
+Portfolios (PortfolioId UNIQUEIDENTIFIER PK, UserId FK, Name)
+
+Positions (PositionId UNIQUEIDENTIFIER PK, PortfolioId FK, InstrumentId FK, AvgPrice DECIMAL, Quantity DECIMAL, OpenedAt DATETIME2, ClosedAt DATETIME2 NULL)
+
+News / Sentiment
+
+NewsItems (NewsId UNIQUEIDENTIFIER PK, InstrumentId FK NULL, Title NVARCHAR(512), Source VARCHAR(255), Url NVARCHAR(1024), Summary NVARCHAR(MAX), PublishedAt DATETIME2, SentimentScore FLOAT)
+
+Backtest results
+
+Backtests (BacktestId UNIQUEIDENTIFIER PK, UserId FK, StrategyJson NVARCHAR(MAX), StartAt DATETIME2, EndAt DATETIME2, ResultJson NVARCHAR(MAX), CreatedAt DATETIME2)
+
+Audit logs
+
+AuditLogs (LogId BIGINT PK IDENTITY, UserId FK NULL, Action VARCHAR(128), Details NVARCHAR(MAX), CreatedAt DATETIME2)
+
+Notes:
+
+Use appropriate indexes on InstrumentId+Timestamp for time series queries.
+
+Consider partitioning OHLC if dataset grows huge (monthly partitions).
+
+Use DECIMAL for money/price precision; avoid FLOAT for money.
+
+6) Key API endpoints (MVP + later)
+
+All protected endpoints require JWT in Authorization header.
+
+Auth
+
+POST /api/auth/register
+
+POST /api/auth/login
+
+POST /api/auth/refresh
+
+POST /api/auth/logout
+
+User/Watchlist
+
+GET /api/user/me
+
+GET /api/watchlists
+
+POST /api/watchlists
+
+POST /api/watchlists/:id/items
+
+Instruments / Market Data
+
+GET /api/instruments?type=crypto|stock&search=...
+
+GET /api/instruments/:id/quote -> latest quote
+
+GET /api/instruments/:id/ohlc?interval=1m&from=&to=&limit=
+
+GET /api/instruments/:id/history/aggregated?interval=1d&from=&to=
+
+Alerts
+
+GET /api/alerts
+
+POST /api/alerts
+
+PUT /api/alerts/:id
+
+DELETE /api/alerts/:id
+
+Realtime WebSocket
+
+ws://.../realtime — subscribe with token and send subscribe message: {"action":"subscribe","instrumentId":123,"channels":["quote","ohlc:1m"]}
+
+Backtesting (later)
+
+POST /api/backtest (strategyJson + params)
+
+GET /api/backtest/:id
+
+Portfolio
+
+GET /api/portfolios
+
+POST /api/portfolios/:id/trade (simulate buy/sell for paper trading)
+
+Admin
+
+GET /api/admin/metrics
+
+7) Market data ingestion strategy
+
+You need historical OHLC + live ticks.
+
+Crypto (easy):
+
+Use Binance or other major exchange WebSocket/REST (public). Pull trade streams, aggregate to candles for 1m/5m/1h etc and persist to OHLC table.
+
+Stocks:
+
+Use an API provider (IEX, Alpha Vantage, Twelve Data, Polygon etc). Many have free tiers but with limits — use polling for lower resolutions (1m) or subscription for high-frequency. For MVP, 1m polling or free providers is acceptable.
+
+Ingest design:
+
+Normalizer component: every provider returns different symbols; normalize to Instrument records.
+
+Aggregator: stream trades into an in-memory buffer that emits candles per interval (1m). Persist completed candles to OHLC table.
+
+Backfill: for historical data, run backfill jobs to fill OHLC several years back (if provider supports).
+
+Scaling:
+
+Run ingest as a cluster with a partitioning key = InstrumentId mod N, so each worker handles a subset of symbols.
+
+Throttle & rate limits:
+
+Respect external API rate limits; implement exponential backoff and caching.
+
+8) Real-time architecture (how live updates flow)
+
+Market Ingest Service receives data (WS or REST).
+
+It aggregates into current-minute candle + latest quote and writes to Redis (fast).
+
+It publishes an event to Redis pub/sub or pushes a job to BullMQ that WebSocket servers are subscribed to.
+
+WebSocket server receives Redis events and pushes data to connected clients subscribed to that instrument.
+
+Optionally persist all raw ticks periodically to Quotes table for audit.
+
+This decouples ingestion from client push and allows horizontal scaling.
+
+9) Indicator calculations (SMA/EMA/RSI/MACD)
+
+Compute indicators on demand from OHLC (server-side) or precompute in background for performance.
+
+For large ranges, compute in batch jobs and cache results in Redis keyed by Instrument+interval+indicator+timestamp.
+
+Keep indicator logic as a library shared across services (npm package in monorepo).
+
+Example: SMA(n) = simple moving average of close price over n periods. Keep formula code typescript-ready.
+
+10) Backtesting design (optional advanced)
+
+Backtest service accepts strategy (JS sandboxed function or param-driven strategies).
+
+Use historical OHLC from MSSQL to simulate runs.
+
+Run backtests as background jobs (BullMQ).
+
+Persist trade logs, performance metrics (Sharpe, drawdown).
+
+Provide visual P&L chart and trade markers on chart.
+
+Security: sandbox user-supplied strategy code (vm2 or separate python).
+
+11) Paper trading / Simulated orders
+
+Implement a simple matching engine: orders accept at market/limit and match against last price.
+
+Maintain Positions table and P&L calculations.
+
+Use this for portfolio tracking and for backtesting validation.
+
+12) News & Sentiment (optional)
+
+Ingest RSS or news APIs. Use lightweight sentiment analysis (VADER or small huggingface model) or a simple lexicon.
+
+Associate news to instruments by symbol mentions or company tickers.
+
+Store sentiment score in NewsItems table.
+
+13) Deployment & infra plan
+
+Start small:
+
+Local dev:
+
+Docker Compose: mssql, redis, node services, nginx, minio
+
+Staging / Prod:
+
+Use a small VM (DigitalOcean droplet or AWS t3.small) or EKS for k8s if you know it.
+
+Use Managed MSSQL (Azure) or run mssql-server in container.
+
+Use Docker images, GitHub Actions for CI: build, test, push images.
+
+Deploy via Docker Compose for early stage, then Helm/Kubernetes if scaling.
+
+Observability:
+
+Structured logs (winston/pino), Sentry for errors, metrics for key events.
+
+Backups:
+
+Regular MSSQL backups to S3/MinIO.
+
+14) Security & compliance (minimum)
+
+Hash passwords (bcrypt), store salts.
+
+Use HTTPS everywhere (TLS).
+
+Rate limit public APIs.
+
+Sanitize all inputs (SQL injection protection).
+
+Store secrets in environment variables / vault.
+
+Implement CORS properly and CSRF protection for forms.
+
+For user strategy sandboxing, never run untrusted code in the main process.
+
+15) Testing & QA
+
+Unit tests: Jest for Node and React.
+
+Integration tests for key APIs (supertest).
+
+E2E tests: Playwright or Cypress for critical flows (login, subscribe to instrument, create alert).
+
+Load test ingestion and websocket endpoints with k6 or Artillery.
+
+16) Developer workflow & repo layout (monorepo suggestion)
+
+/repo
+
+/apps
+
+/web (Next.js)
+
+/admin (optional)
+
+/services
+
+auth-service
+
+ingest-service
+
+ohlc-service
+
+alert-service
+
+backtest-service
+
+websocket-service
+
+/libs
+
+/shared-types
+
+/indicator-lib
+
+/db-utils
+
+/infra
+
+docker-compose.yml
+
+k8s/helm charts
+
+nginx conf
+
+/scripts
+
+data-backfill scripts
+
+/docs
+
+API spec (OpenAPI)
+
+infra setup
+
+Use TypeScript project references for libs and services.
+
+17) 24-week roadmap (3–6 months) — weekly plan (aggressive but realistic)
+
+Assume 24 weeks (6 months). If you want 3 months compress sprints and drop optional features.
+
+Weeks 1–3: Project setup + MVP skeleton
+
+Setup monorepo, Docker compose for dev (MSSQL, Redis)
+
+Basic auth service, user model, migrations
+
+Next.js skeleton + login flow
+
+CI pipeline basic (lint/test)
+
+Weeks 4–6: Market ingest + basic OHLC
+
+Build ingest service for crypto (Binance) + aggregator
+
+Persist 1m candles to OHLC table
+
+WebSocket service to broadcast quotes
+
+Simple chart that consumes WebSocket live data
+
+Weeks 7–9: Charts + indicators + watchlist
+
+Integrate LightweightCharts/TradingView widget
+
+Implement SMA/EMA server-side and client-side caching
+
+Watchlist CRUD + front-end UI
+
+Save watchlists in MSSQL
+
+Weeks 10–12: Alerts + notifications
+
+Alerts service with condition evaluator
+
+Notification service (email + WS push)
+
+UI to create/manage alerts
+
+Tests and basic load tests
+
+Weeks 13–15: Historical data + backfill + screener
+
+Backfill historical OHLC for stocks via provider
+
+Implement screener (filter by indicators/volume etc)
+
+Admin endpoint to run scans (background job)
+
+Weeks 16–18: Paper trading & portfolio
+
+Implement portfolio model, simulated trades, positions
+
+UI showing P&L and history
+
+Export portfolio reports
+
+Weeks 19–21: News + sentiment + rich analytics
+
+News ingestion + sentiment pipeline
+
+Overlay sentiment on charts
+
+Dashboard analytics (top movers, volume surges)
+
+Weeks 22–24: Polish + hardening + demo
+
+Security hardening, logging, monitoring
+
+Add Swagger docs, finalize README
+
+Deploy live demo (cloud VPS)
+
+Create a 10–15 minute demo video and README walkthrough
+
+Prepare interview talking points and system design doc
+
+If you want to compress to 12 weeks, combine tasks and drop optional features (news, sentiment, backtesting).
+
+18) Deliverables you must have for hiring impact
+
+Public GitHub repo(s) with clean commits & good README
+
+Live demo URL (staging) — recruiters like to click
+
+README with architecture diagram, tech choices, and setup instructions
+
+One-pager system-design doc (1–2 pages) you can use in interviews
+
+Demo video (8–12 minutes) showing flows: live chart, alerts, screener, portfolio
+
+Tests and basic CI passing
+
+19) Interview prep points (what to practice)
+
+Explain time-series storage tradeoffs (row vs column, indexes, partitioning)
+
+Explain real-time push architecture and scaling (Redis pub/sub, sticky sessions)
+
+Explain indicator computation choices (on-demand vs precompute)
+
+Be ready to discuss tradeoffs on provider selection and rate limits
+
+Know how you’d scale ingestion for thousands of symbols (worker partitioning)
+
+Know DB index design and why you chose DECIMAL types for price
+
+20) Next immediate steps (this is what you do now)
+
+Do these first three things this week — fast:
+
+Initialize repo + monorepo structure. Create basic Next.js app and auth service. Commit & push.
+
+Stand up local MSSQL + Redis in Docker Compose. Create migrations for Users, Instru ments, OHLC.
+
+Implement crypto ingest for one symbol (BTCUSDT) from a public exchange and persist 1-minute candles to OHLC. Wire a WebSocket server to broadcast tick/candle updates and show them in a basic chart on the Next.js page.
+
+If you get these three done, we already have a working demo: login, one instrument streaming, candle persistence, live chart.
+
+21) What I’ll help you with (concrete)
+
+I’ll give you everything you need to ship:
+
+DB migration SQL & sample table scripts (I can write them next)
+
+Example aggregator + ingest code (TypeScript) for Binance + a stock provider (IEX/Alpha Vantage)
+
+WebSocket server sample and client usage code
+
+Next.js chart component wired to live WS and OHLC API
+
+Alert evaluator job example + Redis/BullMQ use
+
+Backtest worker skeleton
+
+Docker Compose for local development
