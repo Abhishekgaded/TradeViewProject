@@ -109,7 +109,41 @@
 
 
 
-type T = {a:string,b:number,c:boolean};
-type keys = keyof T;
+// type T = {a:string,b:number,c:boolean};
+// type keys = keyof T;
 
 
+// type User = { name: string }
+// type Admin = { name: string, role: 'Admin' };
+// function printUser(u: User | Admin) {
+//   if ("role" in u) {
+//     console.log("Admin :", u.role);
+//   } else {
+//     console.log("User :", u.name);
+//   }
+// }
+
+// printUser({ name: "Abhi" });
+// printUser({ name: "Abhi", role: "Admin" });
+
+type Shape =
+  | { kind: "circle"; radius: number }
+  | { kind: "square"; side: number };
+
+function area(shape: Shape) {
+  if (shape.kind === "circle") {
+    return shape.radius * shape.radius * Math.PI;
+  } else {
+    return shape.side * shape.side;
+  }
+}
+
+function draw(shape: Shape) {
+  console.log(shape.radius);
+}
+
+function invalid(shape: Shape) {
+  if (shape.kind === "circle") {
+    console.log(shape.side);  // ❌
+  }
+}
