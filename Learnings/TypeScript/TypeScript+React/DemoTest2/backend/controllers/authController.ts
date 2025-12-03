@@ -1,78 +1,34 @@
-import jwt from "jsonwebtoken";
+import jwt, { JwtPayload } from "jsonwebtoken";
 import bcrypt from "bcryptjs";
-import PrismaClient from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
 import { Request, Response, NextFunction } from 'express';
 import { hash } from "crypto";
 // import { HttpStatusCode } from "axios";
-
-// const users = [
-//   {
-//     id: 1,
-//     username: "admin",
-//     password: '$2b$10$XnpYnM9jR6/o7KmjT94gK.EFuLjeV5pavM1J88Z7sEzS/buguhz5m',
-//     //password123
-//     role: "admin",
-//   },
-//   {
-//     id: 2,
-//     username: "user",
-//     password: '$2b$10$RjWMetw6KNX/TkGi3Kiz..htM5rE1hkQ4k/H.6u.n.XobCxwxDFuK',
-//     //password124
-//     role: "user",
-//   },
-// ];
-
+const prisma = new PrismaClient();
 export const login = async (req: Request, res: Response) => {
   const { email, password } = req.body;
-  const prisma = new PrismaClient();
+
+  if (!email || !password)
+    return res.status(400).json({ message: "Email & password required" });
+
   const user = await prisma.user.findUnique({ where: { email } });
-  // console.log(user,'jkhsdgjkfhsgadjhg')
 
-  if (!user || !password) {
-    return res.status(400).json({ message: "Email & password is required" });
-  }
+  if (!user) return res.status(401).json({ message: "Invalid credentials" });
 
-  if (!user) {
-    return res.status(401).json({ message: 'Invalid Credentials' })
-  }
-  // const match = await bcrypt.compare(password, user.password);
   const valid = await bcrypt.compare(password, user.password);
+  if (!valid) return res.status(401).json({ message: "Invalid credentials" });
 
-  // const user = await prisma.
-
-  if (!valid) {
-    return res.status(401).json({ message: "Invalid Credentials" });
-  }
-
-
-  const accessToken = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET as string, { expiresIn: '15m' });
-  // const refreshToken = jwt.sign({ id: user.id }, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
-
-  // res.cookie("refreshToken", refreshToken, {
-  //   httpOnly: true,
-  //   secure: false,
-  //   sameSite: "lax",
-  //   path: '/api/auth/refresh',
-  //   maxAge: 7 * 24 * 60 * 60 * 1000
-  // });
-
-
-  // const token = jwt.sign(
-  //   { id: user.id, role: user.role },
-  //   process.env.JWT_SECRET,
-  //   { expiresIn: "1h" }
-  // );
-
-  // res.json({
-  //   accessToken,
-  //   role: user.role,
-  // });
+  const accessToken = jwt.sign(
+    { id: user.id, role: user.role },
+    process.env.JWT_SECRET as string,
+    { expiresIn: "15m" }
+  );
 
   return res.json({
-    message: 'Login Successfull',
+    message: "Login successful",
     accessToken,
     role: user.role,
-  })
+  });
 };
 
 
@@ -80,18 +36,30 @@ export const login = async (req: Request, res: Response) => {
 export const refresh = (req: Request, res: Response) => {
   const token = req.cookies.refreshToken;
 
-  if (!token) return res.status(401).json({ message: "No refresh token" })
+  if (!token)
+    return res.status(401).json({ message: "No refresh token" });
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET! );
-    const newAccess = jwt.sign({ id: decoded.id }, process.env.JWT_REFRESH_SECRET! , { expiresIn: '15m' });
-    return res.json({ accessToken: newAccess })
+    // Decode refresh token
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_REFRESH_SECRET!
+    ) as JwtPayload & { id: string };
+
+    // Issue new access token
+    const newAccess = jwt.sign(
+      { id: decoded.id },
+      process.env.JWT_ACCESS_SECRET!,
+      { expiresIn: '15m' }
+    );
+
+    return res.json({ accessToken: newAccess });
 
   } catch (error) {
-    return res.status(403).json({ message: 'Invalid Refresh Token' })
+    return res.status(403).json({ message: "Invalid Refresh Token" });
   }
+};
 
-}
 
 
 export const logout = (req: Request, res: Response) => {
@@ -101,20 +69,20 @@ export const logout = (req: Request, res: Response) => {
 }
 
 export const register = async (req: Request, res: Response) => {
-
   const { name, email, password } = req.body;
+
   const exists = await prisma.user.findUnique({ where: { email } });
-  if (exists) return res.status(400).json({ message: 'Email already in use' })
+  if (exists) return res.status(400).json({ message: "Email already in use" });
 
   const hashed = await bcrypt.hash(password, 10);
+
   const user = await prisma.user.create({
     data: { name, email, password: hashed },
-  })
+  });
 
-  return res.json({ message: 'User Registered', user });
+  return res.json({ message: "User registered", user });
+};
 
-
-}
 
 
 export const authMiddleware = async (req: any, res: Response, next: NextFunction) => {
