@@ -3,32 +3,43 @@ import bcrypt from "bcryptjs";
 import { PrismaClient } from "@prisma/client";
 import { Request, Response, NextFunction } from 'express';
 import { hash } from "crypto";
-// import { HttpStatusCode } from "axios";
+
 const prisma = new PrismaClient();
 export const login = async (req: Request, res: Response) => {
   const { email, password } = req.body;
+  // console.log(req.body, 'Request body');
+  try {
 
-  if (!email || !password)
-    return res.status(400).json({ message: "Email & password required" });
+    if (!email || !password)
+      return res.status(400).json({ message: "Email & password required" });
 
-  const user = await prisma.user.findUnique({ where: { email } });
+    const user = await prisma.user.findUnique({ where: { email } });
 
-  if (!user) return res.status(401).json({ message: "Invalid credentials" });
+    // console.log(user, '--------user')
 
-  const valid = await bcrypt.compare(password, user.password);
-  if (!valid) return res.status(401).json({ message: "Invalid credentials" });
+    if (!user || user === null) return res.status(401).json({ message: "User not found or is null" });
 
-  const accessToken = jwt.sign(
-    { id: user.id, role: user.role },
-    process.env.JWT_SECRET as string,
-    { expiresIn: "15m" }
-  );
+    const valid = await bcrypt.compare(password, user.password);
+    // console.log(await bcrypt(user.password), '------------- decrypted password')
+    console.log(valid, '----------valid');
+    if (!valid) return res.status(401).json({ message: "Invalid credentials" });
 
-  return res.json({
-    message: "Login successful",
-    accessToken,
-    role: user.role,
-  });
+    const accessToken = jwt.sign(
+      { id: user.id, role: user.role },
+      process.env.JWT_SECRET as string,
+      { expiresIn: "15m" }
+    );
+
+    return res.json({
+      message: "Login successful",
+      accessToken,
+      role: user.role,
+    });
+
+  } catch (error) {
+    console.log(error, 'Error in login authController')
+    throw error;
+  }
 };
 
 
@@ -69,18 +80,24 @@ export const logout = (req: Request, res: Response) => {
 }
 
 export const register = async (req: Request, res: Response) => {
+
   const { name, email, password } = req.body;
 
-  const exists = await prisma.user.findUnique({ where: { email } });
-  if (exists) return res.status(400).json({ message: "Email already in use" });
+  try {
 
-  const hashed = await bcrypt.hash(password, 10);
+    const exists = await prisma.user.findUnique({ where: { email } });
+    if (exists) return res.status(400).json({ message: "Email already in use" });
 
-  const user = await prisma.user.create({
-    data: { name, email, password: hashed },
-  });
+    const hashed = await bcrypt.hash(password, 10);
 
-  return res.json({ message: "User registered", user });
+    const user = await prisma.user.create({
+      data: { name, email, password: hashed },
+    });
+
+    return res.json({ message: "User registered", user });
+  } catch (error) {
+    console.log(error, 'Error in Register authController')
+  }
 };
 
 
