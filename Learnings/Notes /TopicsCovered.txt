@@ -1,0 +1,11 @@
+1) Array
+2) Object
+3) Variables(any,number,boolean string )
+4) function
+5) Tuples
+6) Enums
+7) 
+
+
+
+TimeStamp  38:54
