@@ -1,11 +1,13 @@
+import FullAuthenticationSysMain from "./component/Component/FullAuthenticationSystem/FullAuthenticationSysMain"
 
-import MultiPageForm from "./component/Routes/MultiPageForm/MultiPageForm"
+
+
 
 
 const App = () => {
   return (
     <div>
-      <MultiPageForm />
+      <FullAuthenticationSysMain />
     </div>
   )
 }

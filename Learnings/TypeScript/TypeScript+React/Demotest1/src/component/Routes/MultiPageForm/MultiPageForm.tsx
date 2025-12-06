@@ -1,12 +1,12 @@
 
-import RootLayout from '../Component/RootLayout'
+import RootLayout from './RootLayout'
 import { Route, Routes } from 'react-router-dom'
-import Home from '../Component/Home'
-import About from '../Component/About'
-import Contact from '../Component/Contact'
-import Profile from '../Component/Profile'
-import Dashboard from '../Component/Dashboard'
-import Settings from '../Component/Settings'
+import Home from './Home'
+import About from './About'
+import Contact from './Contact'
+import Profile from './Profile'
+import Dashboard from './Dashboard'
+import Settings from './Settings'
 const MultiPageForm = () => {
   return (
     <div>
