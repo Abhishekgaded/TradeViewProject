@@ -6,18 +6,19 @@ import { hash } from "crypto";
 
 const prisma = new PrismaClient();
 export const login = async (req: Request, res: Response) => {
-  const { email, password } = req.body;
-  // console.log(req.body, 'Request body');
+  const { username, password } = req.body;
+  const email = username;
+  console.log(email, password, 'Request body');
   try {
 
-    if (!email || !password)
+    if (!password)
       return res.status(400).json({ message: "Email & password required" });
-
+    console.log(email, '---email before bcrypt')
     const user = await prisma.user.findUnique({ where: { email } });
 
-    // console.log(user, '--------user')
+    console.log(user, '--------user')
 
-    if (!user || user === null) return res.status(401).json({ message: "User not found or is null" });
+    if (!user || user === null) return res.status(200).json({ message: "User not found or is null" });
 
     const valid = await bcrypt.compare(password, user.password);
     // console.log(await bcrypt(user.password), '------------- decrypted password')
@@ -30,7 +31,7 @@ export const login = async (req: Request, res: Response) => {
       { expiresIn: "15m" }
     );
 
-    return res.json({
+    return res.status(200).json({
       message: "Login successful",
       accessToken,
       role: user.role,
