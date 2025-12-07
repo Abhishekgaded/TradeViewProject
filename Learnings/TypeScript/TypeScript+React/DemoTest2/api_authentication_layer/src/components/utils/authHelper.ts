@@ -1,3 +1,5 @@
+import { useNavigate } from "react-router-dom";
+
 // src/utils/authHelper.ts
 export const getToken = () => {
   const auth = localStorage.getItem("auth");
@@ -6,6 +8,8 @@ export const getToken = () => {
 };
 
 export const logoutUser = () => {
+  const navigate = useNavigate();
   localStorage.removeItem("auth");
-  window.location.href = "/";
+  // window.location.href = "/";
+  navigate('/');
 };

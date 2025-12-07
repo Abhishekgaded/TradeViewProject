@@ -39,7 +39,7 @@ export const AuthProvider = ({ children }) => {
   const login = async (username: string, password: string) => {
     try {
       const res = await api.post("/auth/login", { username, password });
-      console.log(res.data,'ksdfkjhsdfmn')
+      // console.log(res.data,'ksdfkjhsdfmn')
 
       const { token, role } = res.data;
 
