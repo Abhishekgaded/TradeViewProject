@@ -3,7 +3,7 @@ import api from "../../api/api";
 
 interface AuthContextType {
   auth: { isAuthenticated: boolean; token: string | null; role: string | null };
-  login: (username: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
   loading: boolean;
 }
@@ -36,9 +36,9 @@ export const AuthProvider = ({ children }) => {
     setloading(false);
   }, []);
 
-  const login = async (username: string, password: string) => {
+  const login = async (email: string, password: string) => {
     try {
-      const res = await api.post("/auth/login", { username, password });
+      const res = await api.post("/auth/login", { email, password });
       // console.log(res.data,'ksdfkjhsdfmn')
 
       const { token, role } = res.data;

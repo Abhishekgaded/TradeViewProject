@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext";
 const Login = () => {
   const { login } = useAuth();
 
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
@@ -16,7 +16,7 @@ const Login = () => {
     console.log('Handle Event Login')
     setError("");
 
-    const ok = await login(username, password).catch(err => {
+    const ok = await login(email, password).catch(err => {
       console.error("Login crashed", err);
       setError("Something broke");
       return false;
@@ -36,8 +36,8 @@ const Login = () => {
         <input
           type="text"
           placeholder="username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
         />
 
         <input
