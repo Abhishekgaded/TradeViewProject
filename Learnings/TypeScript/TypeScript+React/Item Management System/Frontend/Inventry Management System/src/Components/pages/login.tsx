@@ -9,10 +9,6 @@ const LoginPage = () => {
     password: ''
   })
 
-  const initialFormValues = useState({
-    username: '',
-    password: ''
-  });
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     console.log('FromDetails :', formDetails)
