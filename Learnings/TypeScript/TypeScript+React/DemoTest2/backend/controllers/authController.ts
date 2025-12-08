@@ -6,9 +6,9 @@ import { hash } from "crypto";
 
 const prisma = new PrismaClient();
 export const login = async (req: Request, res: Response) => {
-  const { username, password } = req.body;
-  const email = username;
-  console.log(email, password, 'Request body');
+  const { email, password } = req.body;
+
+  console.log(req.body, 'Request body');
   try {
 
     if (!password)
