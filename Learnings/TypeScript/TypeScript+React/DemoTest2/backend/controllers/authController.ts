@@ -18,12 +18,12 @@ export const login = async (req: Request, res: Response) => {
 
     console.log(user, '--------user')
 
-    if (!user || user === null) return res.status(200).json({ message: "User not found or is null" });
+    if (!user || user === null) return res.status(404).json({ message: "User not found or is null" });
 
     const valid = await bcrypt.compare(password, user.password);
     // console.log(await bcrypt(user.password), '------------- decrypted password')
     console.log(valid, '----------valid');
-    if (!valid) return res.status(401).json({ message: "Invalid credentials" });
+    if (!valid) return res.status(404).json({ message: "Invalid credentials" });
 
     const accessToken = jwt.sign(
       { id: user.id, role: user.role },
