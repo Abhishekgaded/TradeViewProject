@@ -8,7 +8,7 @@ const ProtectedRoute = ({ roles, children }) => {
 
   // Not logged in → unauthorized (instead of login)
   if (!auth.isAuthenticated) {
-    return <Navigate to="/unauthorized" replace />;
+    return <Navigate to="/" replace />;
   }
 
   // Logged in but role mismatch → unauthorized
